@@ -1,5 +1,4 @@
-
-const CACHE_NAME = 'Tienda_Online-v2';
+const CACHE_NAME = 'Tienda_Online_Ropa';
 const urlsToCache = [
     '/',
     '/assets/html/agregar_producto.html',
@@ -23,93 +22,58 @@ const urlsToCache = [
     '/assets/bootstrap/js/bootstrap.bundle.min.js'
 ];
 
+// Evento de instalación: Almacenar archivos en caché
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
                 return cache.addAll(urlsToCache);
             })
+            .catch(error => console.error('Error al abrir o agregar archivos al caché:', error))
     );
 });
 
-self.addEventListener('fetch', event => {
-    event.respondWith(
-        caches.match(event.request).then(response => {
-            if (response) {
-                return response;
-            }
-
-            return fetch(event.request, { redirect: 'follow' })
-                .then(response => {
-                    // Asegúrate de que la respuesta sea válida antes de almacenarla
-                    if (!response || response.status !== 200 || response.type !== 'basic') {
-                        return response;
+// Evento de activación: Limpiar cachés antiguas
+self.addEventListener('activate', event => {
+    event.waitUntil(
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(cacheName => {
+                    if (cacheName !== CACHE_NAME) {
+                        console.log('Eliminando caché antigua:', cacheName);
+                        return caches.delete(cacheName);
                     }
-
-                    // Clona y almacena en caché
-                    const responseToCache = response.clone();
-                    caches.open(CACHE_NAME).then(cache => {
-                        cache.put(event.request, responseToCache);
-                    });
-
-                    return response;
                 })
-                .catch(error => {
-                    console.error('Error al manejar la solicitud:', error);
-                    return new Response('Error de red o recurso no disponible.', {
-                        status: 500,
-                        statusText: 'Fetch error'
-                    });
-                });
+            );
         })
     );
 });
 
-// Manejar operaciones de IndexedDB
-self.addEventListener('sync', event => {
-    if (event.tag === 'sync-datos') {
-        event.waitUntil(syncDatos());
-    }
-});
+// Evento de fetch: Proveer respuesta desde caché o red
+self.addEventListener('fetch', event => {
+    event.respondWith(
+        caches.match(event.request)
+            .then(cachedResponse => {
+                if (cachedResponse) {
+                    // Si el recurso está en caché, úsalo
+                    return cachedResponse;
+                }
 
-function syncDatos() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open('miBaseDeDatos', 1);
-
-        request.onsuccess = event => {
-            const db = event.target.result;
-            const transaction = db.transaction(['datosPendientes'], 'readwrite');
-            const store = transaction.objectStore('datosPendientes');
-
-            store.getAll().onsuccess = event => {
-                const datosPendientes = event.target.result;
-
-                datosPendientes.forEach(dato => {
-                    fetch('/api/endpoint', {
-                        method: 'POST',
-                        body: JSON.stringify(dato),
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    }).then(response => {
-                        if (response.ok) {
-                            store.delete(dato.id);
-                        }
-                    }).catch(error => {
-                        console.error('Error al sincronizar datos:', error);
-                    });
+                // Si no está en caché, intenta obtenerlo de la red
+                return fetch(event.request).then(networkResponse => {
+                    // Verifica que la respuesta sea válida antes de almacenarla
+                    if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+                        const responseToCache = networkResponse.clone();
+                        caches.open(CACHE_NAME).then(cache => {
+                            cache.put(event.request, responseToCache);
+                        });
+                    }
+                    return networkResponse;
                 });
-
-                resolve();
-            };
-
-            store.getAll().onerror = event => {
-                reject(event.target.error);
-            };
-        };
-
-        request.onerror = event => {
-            reject(event.target.error);
-        };
-    });
-}
+            })
+            .catch(() => {
+                // Si todo falla, muestra un mensaje de error o una página offline genérica
+                return caches.match('/assets/html/bienvenido.html');
+            })
+    );
+});

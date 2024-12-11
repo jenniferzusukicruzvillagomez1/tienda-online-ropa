@@ -1,7 +1,9 @@
-if ('serviceWorker' in navigator && 'SyncManager' in window) {
-    navigator.serviceWorker.ready.then(registration => {
-        return registration.sync.register('sync-datos');
-    }).catch(error => {
-        console.error('Error al registrar la sincronización:', error);
-    });
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js')
+        .then(registration => {
+            console.log('Service Worker registrado con éxito:', registration.scope);
+        })
+        .catch(error => {
+            console.error('Error al registrar el Service Worker:', error);
+        });
 }
