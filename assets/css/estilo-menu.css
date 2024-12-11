@@ -1,0 +1,93 @@
+/* Estilos generales */
+body {
+    background-color: #F6F5EC;
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    color: #333;
+  }
+  
+  header {
+    background-color: #B29079;
+    color: #FFFFFF;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  button{
+    padding: 10px 10px;
+    margin-inline: 10px;
+    border: none;
+    font-size: 14px;
+    background: #C1B6A4;
+    font-weight: 600;
+    cursor: pointer;
+    color: white;
+    outline: none;
+    border-radius: 5px;
+}
+  header a {
+    color: #FFFFFF;
+    text-decoration: none;
+    margin: 0 15px;
+  }
+  
+  header a:hover {
+    text-decoration: underline;
+  }
+  
+  .btn-primary {
+    background-color: #EFE7DA;
+    border-color: #B29079;
+    color: #B29079;
+  }
+  
+  .btn-primary:hover {
+    background-color: #B29079;
+    color: #EFE7DA;
+  }
+  
+  /* Tarjetas de productos */
+  .card {
+    background-color: #E1DACA;
+    border-radius: 15px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .card img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+  }
+  
+  .card-body {
+    text-align: center;
+  }
+  
+  .card-title {
+    color: #333;
+  }
+  
+  .card-text {
+    color: #777;
+  }
+  
+  .btn-outline-success {
+    border-color: #B29079;
+    color: #B29079;
+  }
+  
+  .btn-outline-success:hover {
+    background-color: #B29079;
+    color: #EFE7DA;
+  }
+  
+  footer {
+    background-color: #C1B6A4;
+    color: #FFFFFF;
+    text-align: center;
+    padding: 15px;
+    margin-top: 20px;
+  }
+  

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalles del Producto</title>
+  <link rel="icon" href="../images/tendedero.png">
+  <link href="../bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <link href="../css/estilo-menu.css" rel="stylesheet">
+  <script>
+    function cerrarSesion() {
+      localStorage.removeItem('usuario');
+      window.location.href = '../../index.html';
+    }
+     
+     window.onload = function () {
+      var dbName = 'NuevoProducto';
+      if(!localStorage.getItem('usuario')) {
+        window.location.href = 'index.html';
+      }
+      let request = indexedDB.open(dbName, 4);
+
+      request.onupgradeneeded = function (event) {
+        db = event.target.result;
+        if (!db.objectStoreNames.contains('carrito')) {
+          db.createObjectStore('carrito', { keyPath: 'id' });
+        }
+      };
+
+      request.onsuccess = function (event) {
+        db = event.target.result;
+        actualizarContadorCarrito();
+      };
+
+      request.onerror = function (event) {
+        console.error('Error abriendo IndexedDB:', event.target.errorCode);
+      };
+    };
+
+    function actualizarContadorCarrito() {
+      let transaction = db.transaction(['carrito'], 'readonly');
+      let store = transaction.objectStore('carrito');
+      let request = store.getAll();
+
+      request.onsuccess = function (event) {
+        const numCart = document.getElementById('num_cart');
+        numCart.textContent = event.target.result.length;
+      };
+
+      request.onerror = function (event) {
+        console.error('Error actualizando contador del carrito:', event.target.errorCode);
+      };
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const productoId = parseInt(urlParams.get('id'));
+
+      let request = indexedDB.open('NuevoProducto', 4);
+
+      request.onupgradeneeded = (event) => {
+        let db = event.target.result;
+        let objectStore = db.createObjectStore('productos', { keyPath: 'id' });
+        objectStore.createIndex('nombre', 'nombre', { unique: false });
+        objectStore.createIndex('precio', 'precio', { unique: false });
+        objectStore.createIndex('descuento', 'descuento', { unique: false });
+      };
+
+      request.onsuccess = (event) => {
+        let db = event.target.result;
+        let transaction = db.transaction(['productos'], 'readonly');
+        let objectStore = transaction.objectStore('productos');
+
+        let request = objectStore.get(productoId);
+
+        request.onsuccess = (event) => {
+          let producto = event.target.result;
+          if (producto) {
+            mostrarProducto(producto);
+          } else {
+            console.error('Producto no encontrado');
+          }
+        };
+
+        request.onerror = (event) => {
+          console.error('Error al obtener el producto', event);
+        };
+      };
+
+      request.onerror = (event) => {
+        console.error('Error al abrir la base de datos', event);
+      };
+    });
+ 
+    function mostrarProducto(producto) {
+      let container = document.getElementById('productosContainer');
+      let productoDiv = document.createElement('div');
+      productoDiv.className = 'producto';
+      productoDiv.innerHTML = `
+        <div class="row">
+          <div class="col-md-6 order-md-1">
+            <div id="carouselImages" class="carousel slide">
+              <div class="carousel-inner">
+                <div class="carousel-item active">
+                  <img src="../images/productos/${producto.id}/2.jpg" class="d-block w-100">
+                </div>
+                <div class="carousel-item">
+                  <img src="../images/productos/${producto.id}/2.jpg" class="d-block w-100">
+                </div>
+              </div>
+              <button class="carousel-control-prev" type="button" data-bs-target="#carouselImages" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+              </button>
+              <button class="carousel-control-next" type="button" data-bs-target="#carouselImages" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+              </button>
+            </div>
+          </div>
+          <div class="col-md-6 order-md-2">
+            <h3>${producto.nombre}</h3>
+            <p class="text-secondary">Descuento de: ${producto.descuento}</p>
+            <p class="text-primary">${producto.content}</p>
+            <p>Precio: $${producto.precio}</p>
+            <div class="d-grid gap-3 col-10 mx-auto">
+          <button class="btn btn-primary" type="button">Comprar Ahora</button>  
+              <button class="btn btn-outline-primary" onclick="agregarAlCarrito(${producto.id})">Agregar al carrito</button>
+            </div>
+          </div>
+        </div>
+      `;
+      container.appendChild(productoDiv);
+    }
+  </script>
+</head>
+<body>
+  <header>
+    <div class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+      <div class="container">
+        <a href="./bienvenido.html" class="navbar-brand"><strong>Ropa Americana</strong></a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarHeader" aria-expanded="false">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarHeader">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <li class="nav-item"><a href="agregar_producto.html" class="nav-link active">Agregar producto</a></li>
+            <li class="nav-item"><button onclick="cerrarSesion()">Cerrar sesión</button></li>
+            <li class="nav-item"><a href="checkout.html" class="nav-link active">Carrito <span id="num_cart" class="badge bg-secondary">0</span></a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="container p-2" id="productosContainer">
+    </div>
+  </main>
+  <script src="../bootstrap/js/bootstrap.bundle.min.js"></script>
+<script>
+     function agregarAlCarrito(id) {
+    console.log('Agregando producto con ID:', id); 
+   
+   let transaction = db.transaction(['productos', 'carrito'], 'readwrite');
+   let productosStore = transaction.objectStore('productos');
+   let carritoStore = transaction.objectStore('carrito');
+
+   let request = productosStore.get(id);
+
+   request.onsuccess = function (event) {
+     let producto = event.target.result;
+     if (producto) {
+       let carritoRequest = carritoStore.get(id);
+       
+       carritoRequest.onsuccess = function (event) {
+         let productoEnCarrito = event.target.result;
+         if (productoEnCarrito) {
+           productoEnCarrito.cantidad += 1;
+           carritoStore.put(productoEnCarrito); 
+         } else {
+           producto.cantidad = 1;  
+           carritoStore.put(producto);
+         }
+         console.log('Producto agregado al carrito:', producto);
+         actualizarContadorCarrito();
+       };
+
+       carritoRequest.onerror = function (event) {
+         console.error('Error obteniendo producto del carrito:', event.target.errorCode);
+       };
+     }
+   };
+
+   request.onerror = function (event) {
+     console.error('Error obteniendo producto para agregar al carrito:', event.target.errorCode);
+   };
+ }
+
+
+</script>
+</body>
+</html>

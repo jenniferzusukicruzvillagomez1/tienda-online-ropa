@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout</title>
+  <link rel="icon" href="../images/tendedero.png">
+  <link href="../bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <link href="../css/estilo-menu.css" rel="stylesheet">
+  <script>
+    function cerrarSesion() {
+      localStorage.removeItem('usuario');
+      window.location.href = '../../index.html';
+    }
+    window.onload = function () {
+      var dbName = 'NuevoProducto';
+      if(!localStorage.getItem('usuario')) {
+        window.location.href = 'index.html';
+      }
+      let request = indexedDB.open(dbName, 4);
+
+      request.onupgradeneeded = function (event) {
+        db = event.target.result;
+        if (!db.objectStoreNames.contains('carrito')) {
+          db.createObjectStore('carrito', { keyPath: 'id' });
+        }
+      };
+
+      request.onsuccess = function (event) {
+        db = event.target.result;
+        actualizarContadorCarrito();
+      };
+
+      request.onerror = function (event) {
+        console.error('Error abriendo IndexedDB:', event.target.errorCode);
+      };
+    };
+
+    function actualizarContadorCarrito() {
+      let transaction = db.transaction(['carrito'], 'readonly');
+      let store = transaction.objectStore('carrito');
+      let request = store.getAll();
+
+      request.onsuccess = function (event) {
+        const numCart = document.getElementById('num_cart');
+        numCart.textContent = event.target.result.length;
+      };
+
+      request.onerror = function (event) {
+        console.error('Error actualizando contador del carrito:', event.target.errorCode);
+      };
+    }
+    // contenido sobre el carrito
+
+    document.addEventListener('DOMContentLoaded', () => {
+      let request = indexedDB.open('NuevoProducto', 4);
+
+      request.onsuccess = (event) => {
+        let db = event.target.result;
+        let transaction = db.transaction(['carrito'], 'readonly');
+        let carritoStore = transaction.objectStore('carrito');
+
+        let requestCarrito = carritoStore.getAll();
+        requestCarrito.onsuccess = function (event) {
+          let productosCarrito = event.target.result;
+          let carritoContainer = document.getElementById('carrito');
+
+          let tableHTML = `<div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th>Precio</th>
+          <th>Cantidad</th>
+          <th>Subtotal</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+          if (productosCarrito.length > 0) {
+            productosCarrito.forEach((producto) => {
+              tableHTML += `
+        <tr>
+          <td>${producto.nombre}</td>
+          <td>${producto.precio}</td>
+          <td>
+            <input type="number" min="1" max="10" step="1" value="${producto.cantidad}" size="5" id="cantidad_${producto.id}" onchange="actualizaCantidad(this.value, ${producto.id})">
+          </td>
+          <td>${producto.precio * producto.cantidad}</td>
+          <td><button onclick="eliminarProducto(${producto.id})">Eliminar</button></td>
+        </tr>`;
+            });
+
+            tableHTML += `</tbody></table></div>`;
+          } else {
+            tableHTML = '<p>No hay productos en el carrito.</p>';
+          }
+
+          // Finalmente actualizamos el contenedor del carrito con el contenido generado
+          carritoContainer.innerHTML = tableHTML;
+        };
+
+        requestCarrito.onerror = function (event) {
+          console.error('Error al obtener los productos del carrito', event);
+        };
+      };
+
+      request.onerror = (event) => {
+        console.error('Error al abrir la base de datos', event);
+      };
+    });
+
+    function actualizaCantidad(cantidad, id) {
+      let request = indexedDB.open('NuevoProducto', 4);
+
+      request.onsuccess = (event) => {
+        let db = event.target.result;
+        let transaction = db.transaction(['carrito'], 'readwrite');
+        let carritoStore = transaction.objectStore('carrito');
+
+        let request = carritoStore.get(id);
+
+        request.onsuccess = (event) => {
+          let producto = event.target.result;
+          producto.cantidad = parseInt(cantidad);
+          carritoStore.put(producto);
+        };
+
+        request.onerror = (event) => {
+          console.error('Error al actualizar la cantidad', event);
+        };
+      };
+
+      request.onerror = (event) => {
+        console.error('Error al abrir la base de datos', event);
+      };
+    }
+
+    function eliminarProducto(id) {
+      let request = indexedDB.open('NuevoProducto', 4);
+
+      request.onsuccess = (event) => {
+        let db = event.target.result;
+        let transaction = db.transaction(['carrito'], 'readwrite');
+        let carritoStore = transaction.objectStore('carrito');
+
+        let request = carritoStore.delete(id);
+
+        request.onsuccess = (event) => {
+          location.reload();
+        };
+
+        request.onerror = (event) => {
+          console.error('Error al eliminar el producto', event);
+        };
+      };
+
+      request.onerror = (event) => {
+        console.error('Error al abrir la base de datos', event);
+      };
+    }
+  </script>
+</head>
+
+<body>
+  <header>
+    <div class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+      <div class="container">
+        <a href="./bienvenido.html" class="navbar-brand"><strong>Ropa Americana</strong></a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarHeader" aria-expanded="false">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarHeader">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <li class="nav-item"><a href="agregar_producto.html" class="nav-link active">Agregar producto</a></li>
+            <li class="nav-item"><button onclick="cerrarSesion()">Cerrar sesión</button></li>
+          </ul>
+          <button class="btn btn-primary" onclick="gocar()">Carrito <span id="num_cart" class="badge bg-secondary">0</span></button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <h1>Checkout</h1>
+  <div id="carrito"></div>
+</body>
+<script src="../bootstrap/js/bootstrap.bundle.min.js"></script>
+
+<script>function gocar() {
+      let transaction = db.transaction(['carrito'], 'readonly');
+      let store = transaction.objectStore('carrito');
+      let request = store.getAll();
+
+      request.onsuccess = function (event) {
+        console.log('Contenido del carrito:', event.target.result);
+      };
+
+      request.onerror = function (event) {
+        console.error('Error obteniendo contenido del carrito:', event.target.errorCode);
+      };
+      console.log(request);
+      
+      window.location.href = 'checkout.html';
+    }
+
+    </script>
+</html>

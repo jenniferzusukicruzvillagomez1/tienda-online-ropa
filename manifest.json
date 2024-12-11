@@ -1,0 +1,21 @@
+{
+    "short_name": "Tienda_Online",
+    "name": "Tienda",
+    "icons": [
+      {
+        "src": "assets/images/tendedero.png",
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "any maskable"
+      }
+    ],
+    "start_url": "index.html",
+    "display": "standalone",
+    "background_color": "#026198",
+    "theme_color": "#026198",
+    "orientation": "portrait",
+    "scope": "/",
+    "description": "Tienda_Online",
+    "prefer_related_applications": false
+  }
+  

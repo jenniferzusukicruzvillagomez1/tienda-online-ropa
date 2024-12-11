@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inicio de Sesión</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="assets/images/tendedero.png">
+    <link rel="stylesheet" href="assets/css/estilos.css">
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('usuario')) {
+                alert('Ya has iniciado sesión');
+                window.location.href = 'assets/html/bienvenido.html';
+            }
+            let request = indexedDB.open('miBaseDeDatos', 1);
+
+            request.onupgradeneeded = (event) => {
+                let db = event.target.result;
+                let objectStore = db.createObjectStore('usuarios', { keyPath: 'id', autoIncrement: true });
+                objectStore.createIndex('correo', 'correo', { unique: true });
+                objectStore.createIndex('contraseña', 'contraseña', { unique: false });
+            };
+
+            request.onsuccess = (event) => {
+                let db = event.target.result;
+
+                document.getElementById('loginForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+
+                    let correo = document.getElementById('Correo').value;
+                    let contraseña = document.getElementById('Contraseña').value;
+
+                    if (!correo || !contraseña) {
+                        alert('Campos requeridos');
+                        return;
+                    }
+
+                    let transaction = db.transaction(['usuarios'], 'readonly');
+                    let objectStore = transaction.objectStore('usuarios');
+                    let index = objectStore.index('correo');
+                    let request = index.get(correo);
+
+                    request.onsuccess = (event) => {
+                        let usuario = event.target.result;
+
+                        if (usuario && usuario.contraseña === contraseña) {
+                            localStorage.removeItem('intentos');
+                            localStorage.removeItem('tiempo_bloqueo');
+                            localStorage.setItem('usuario', JSON.stringify(usuario));
+                            alert('Inicio de sesión exitoso');
+                            window.location.href = 'assets/html/bienvenido.html';
+                        } else {
+                            alert('Correo o contraseña incorrectos');
+                            let intentos = parseInt(localStorage.getItem('intentos')) || 0;
+                            intentos++;
+                            localStorage.setItem('intentos', intentos);
+
+                            if (intentos >= 3) {
+                                let tiempoBloqueo = Date.now() + 60000;
+                                localStorage.setItem('tiempo_bloqueo', tiempoBloqueo);
+                                alert('Has agotado tus 3 intentos, inténtalo de nuevo en 1 minuto');
+                            }
+                        }
+                    };
+
+                    request.onerror = (event) => {
+                        console.error('Error al obtener el usuario', event);
+                    };
+                });
+
+                document.getElementById('registerForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+
+                    let correo = document.getElementById('CorreoRegistro').value;
+                    let contraseña = document.getElementById('ContraseñaRegistro').value;
+
+                    if (!correo || !contraseña) {
+                        alert('Campos requeridos');
+                        return;
+                    }
+
+                    let transaction = db.transaction(['usuarios'], 'readwrite');
+                    let objectStore = transaction.objectStore('usuarios');
+                    let request = objectStore.add({ correo: correo, contraseña: contraseña });
+
+                    request.onsuccess = (event) => {
+                        alert('Registro exitoso');
+                        document.getElementById('registerForm').reset();
+                    };
+
+                    request.onerror = (event) => {
+                        console.error('Error al registrar el usuario', event);
+                    };
+                });
+
+                let tiempoBloqueo = parseInt(localStorage.getItem('tiempo_bloqueo')) || 0;
+                if (tiempoBloqueo > Date.now()) {
+                    let tiempoRestante = (tiempoBloqueo - Date.now()) / 60000;
+                    alert(`Has agotado tus 3 intentos, inténtalo de nuevo en ${Math.ceil(tiempoRestante)} minuto(s)`);
+                    document.getElementById('loginForm').style.display = 'none';
+                }
+            };
+
+            request.onerror = (event) => {
+                console.error('Error al abrir la base de datos', event);
+            };
+        });
+    </script>
+</head>
+
+<body>
+    <main>
+        <div class="contenedor__todo">
+            <div class="caja__trasera">
+                <div class="caja__trasera-login">
+                    <h3>¿Ya tienes una cuenta?</h3>
+                    <p>Inicia sesión para entrar en la página</p>
+                    <button id="btn__iniciar-sesion">Iniciar Sesión</button>
+                </div>
+                <div class="caja__trasera-register">
+                    <h3>¿Aún no tienes una cuenta?</h3>
+                    <p>Regístrate para que puedas iniciar sesión</p>
+                    <button id="btn__registrarse">Regístrate</button>
+                </div>
+            </div>
+
+            <div class="contenedor__login-register">
+                <form id="loginForm" class="formulario__login">
+                    <h2>Iniciar Sesión</h2>
+                    <input type="email" id="Correo" name="Correo" placeholder="Correo" required>
+                    <input type="password" id="Contraseña" name="Contraseña" placeholder="Contraseña" required>
+                    <button type="submit" name="Login">Iniciar Sesión</button>
+                </form>
+
+                <form id="registerForm" class="formulario__register">
+                    <h2>Regístrate</h2>
+                    <input type="email" id="CorreoRegistro" name="CorreoRegistro" placeholder="Correo" required>
+                    <input type="password" id="ContraseñaRegistro" name="ContraseñaRegistro" placeholder="Contraseña"
+                        required>
+                    <button type="submit" name="Register">Regístrate</button>
+                </form>
+            </div>
+        </div>
+    </main>
+    <script src="assets/js/basesincronizacion.js"></script>
+    <script src="script.js"></script>
+    <script src="assets/js/script.js"></script>
+</body>
+
+
+</html>
